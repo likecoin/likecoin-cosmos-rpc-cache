@@ -1,0 +1,10 @@
+version: "3.6"
+services:
+  redis:
+    image: redis:6
+    restart: always
+  rpc-cache:
+    build: .
+    ports:
+      - 8080:8080
+    restart: always

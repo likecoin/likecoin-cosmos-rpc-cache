@@ -1,0 +1,15 @@
+{
+  "name": "likecoin-cosmos-rpc-cache",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "author": "Chung Wu <imwmbm@gmail.com>",
+  "license": "GPLv3",
+  "dependencies": {
+    "axios": "^0.27.2",
+    "express": "^4.18.1",
+    "express-http-proxy": "^1.6.3"
+  }
+}

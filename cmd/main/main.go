@@ -2,9 +2,12 @@ package main
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 
 	"github.com/spf13/cobra"
+
+	"github.com/likecoin/likecoin-cosmos-rpc-cache/httpproxy"
 )
 
 const (
@@ -23,19 +26,25 @@ var rootCmd = &cobra.Command{
 		if err != nil {
 			panic(err)
 		}
-		webListenAddr, err := cmd.Flags().GetString(cmdWebListenAddr)
+		rpcEndpointURL, err := url.Parse(rpcEndpoint)
 		if err != nil {
 			panic(err)
 		}
-		fmt.Printf("%s, %s, %s\n", redisEndpoint, rpcEndpoint, webListenAddr)
-		return nil
+		webListenAddrs, err := cmd.Flags().GetStringSlice(cmdWebListenAddr)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Printf("%s, %s, %v\n", redisEndpoint, rpcEndpoint, webListenAddrs)
+		err = httpproxy.Run(rpcEndpointURL, webListenAddrs)
+		fmt.Printf("err: %v\n", err)
+		return err
 	},
 }
 
 func setupFlags() {
 	rootCmd.Flags().String(cmdRPCEndpoint, "localhost:26657", "the Tendermint RPC endpoint")
 	rootCmd.Flags().String(cmdRedisEndpoint, "localhost:6379", "the Redis server endpoint")
-	rootCmd.Flags().String(cmdWebListenAddr, "0.0.0.0:8080", "the address and port for providing web service")
+	rootCmd.Flags().StringSlice(cmdWebListenAddr, []string{"0.0.0.0:8080"}, "the address and port for providing web service")
 }
 
 func main() {

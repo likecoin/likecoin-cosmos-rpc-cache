@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"net/http"
 	"net/url"
 	"os"
 
@@ -35,7 +36,12 @@ var rootCmd = &cobra.Command{
 			panic(err)
 		}
 		fmt.Printf("%s, %s, %v\n", redisEndpoint, rpcEndpoint, webListenAddrs)
-		err = httpproxy.Run(rpcEndpointURL, webListenAddrs)
+		proxy := httpproxy.NewInterceptReverseProxy(func(req *http.Request, body []byte) {
+			fmt.Printf("Method: %s\n", req.Method)
+			fmt.Printf("URI: %s\n", req.URL)
+			fmt.Printf("Response: '%s'\n", string(body))
+		})
+		err = httpproxy.Run(rpcEndpointURL, webListenAddrs, proxy)
 		fmt.Printf("err: %v\n", err)
 		return err
 	},

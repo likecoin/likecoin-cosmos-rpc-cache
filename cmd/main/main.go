@@ -2,12 +2,12 @@ package main
 
 import (
 	"fmt"
-	"net/http"
 	"net/url"
 	"os"
 
 	"github.com/spf13/cobra"
 
+	"github.com/likecoin/likecoin-cosmos-rpc-cache/cache"
 	"github.com/likecoin/likecoin-cosmos-rpc-cache/httpproxy"
 )
 
@@ -36,14 +36,10 @@ var rootCmd = &cobra.Command{
 			panic(err)
 		}
 		fmt.Printf("%s, %s, %v\n", redisEndpoint, rpcEndpoint, webListenAddrs)
-		proxy := httpproxy.NewInterceptReverseProxy(func(req *http.Request, body []byte) {
-			fmt.Printf("Method: %s\n", req.Method)
-			fmt.Printf("URI: %s\n", req.URL)
-			fmt.Printf("Response: '%s'\n", string(body))
-		})
-		err = httpproxy.Run(rpcEndpointURL, webListenAddrs, proxy)
-		fmt.Printf("err: %v\n", err)
-		return err
+		memCache := cache.NewMemoryCache()
+		handler := cache.NewCacheHTTPAdaptor(memCache)
+		proxy := httpproxy.NewCachedReverseProxy(rpcEndpointURL, handler)
+		return httpproxy.Run(proxy, webListenAddrs)
 	},
 }
 

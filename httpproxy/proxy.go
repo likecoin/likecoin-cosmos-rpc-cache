@@ -1,7 +1,6 @@
 package httpproxy
 
 import (
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httputil"
@@ -10,47 +9,47 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-var _ http.ResponseWriter = &ResponseWriterWrapper{}
-
-type ResponseWriterWrapper struct {
-	http.ResponseWriter
-	AdditionalWriter    io.Writer
-	WriteHeaderCallback func(int) io.Writer
-}
-
-func NewResponseWriterWrapper(responseWriter http.ResponseWriter, writeHeaderCallback func(int) io.Writer) *ResponseWriterWrapper {
-	return &ResponseWriterWrapper{
-		ResponseWriter:      responseWriter,
-		AdditionalWriter:    nil,
-		WriteHeaderCallback: writeHeaderCallback,
-	}
-}
-
-func (w *ResponseWriterWrapper) Write(bz []byte) (int, error) {
-	n, err := w.ResponseWriter.Write(bz)
-	if w.AdditionalWriter != nil {
-		w.AdditionalWriter.Write(bz[:n])
-	}
-	return n, err
-}
-
-func (w *ResponseWriterWrapper) WriteHeader(statusCode int) {
-	w.ResponseWriter.WriteHeader(statusCode)
-	if w.WriteHeaderCallback != nil {
-		w.AdditionalWriter = w.WriteHeaderCallback(statusCode)
-	}
-}
-
 type ReadCloserWrapper struct {
 	io.ReadCloser
+	CopyWriter    *io.PipeWriter
 	CloseCallback func(error)
 }
 
-func NewReadCloserWrapper(readCloser io.ReadCloser, closeCallback func(error)) *ReadCloserWrapper {
+func NewReadCloserWrapper(readCloser io.ReadCloser) *ReadCloserWrapper {
 	return &ReadCloserWrapper{
-		ReadCloser:    readCloser,
-		CloseCallback: closeCallback,
+		ReadCloser: readCloser,
 	}
+}
+
+func (c *ReadCloserWrapper) SetCloseCallback(closeCallback func(error)) *ReadCloserWrapper {
+	c.CloseCallback = closeCallback
+	return c
+}
+
+func (c *ReadCloserWrapper) SetCopyWriter(w *io.PipeWriter) *ReadCloserWrapper {
+	c.CopyWriter = w
+	return c
+}
+
+func (c *ReadCloserWrapper) Read(buf []byte) (n int, readErr error) {
+	n, readErr = c.ReadCloser.Read(buf)
+	if c.CopyWriter == nil {
+		return
+	}
+	if readErr != nil && readErr != io.EOF {
+		// when read error happens, the pipe should also get it so it can abort the cache
+		c.CopyWriter.CloseWithError(readErr)
+		return
+	}
+	buf = buf[:n]
+	for len(buf) > 0 {
+		w, writeErr := c.CopyWriter.Write(buf)
+		if writeErr != nil {
+			return
+		}
+		buf = buf[w:]
+	}
+	return
 }
 
 func (c *ReadCloserWrapper) Close() error {
@@ -61,57 +60,66 @@ func (c *ReadCloserWrapper) Close() error {
 	return err
 }
 
-type InterceptReverseProxy struct {
-	Callback func(req *http.Request, body []byte)
+type CachedReverseProxyHandler interface {
+	// Run before forwarding the request to backend
+	// If returned true, then the returned bytes
+	PreHook(req *http.Request) ([]byte, bool)
+	ShouldCache(req *http.Request, statusCode int) bool
+	Cache(req *http.Request, statusCode int, body []byte)
 }
 
-func NewInterceptReverseProxy(callback func(*http.Request, []byte)) *InterceptReverseProxy {
-	return &InterceptReverseProxy{
-		Callback: callback,
+type HTTPCacheHandler interface {
+	HandleRequest(req *http.Request, writer http.ResponseWriter) bool
+	ShouldCache(req *http.Request, res *http.Response) bool
+	DoCache(req *http.Request, res *http.Response, bodyReader io.ReadCloser)
+}
+
+type CachedReverseProxy struct {
+	Target       *url.URL
+	CacheHandler HTTPCacheHandler
+}
+
+func NewCachedReverseProxy(target *url.URL, handler HTTPCacheHandler) *CachedReverseProxy {
+	return &CachedReverseProxy{
+		Target:       target,
+		CacheHandler: handler,
 	}
 }
 
-func (proxy *InterceptReverseProxy) Serve(req *http.Request, writer http.ResponseWriter, target *url.URL) {
-	reverseProxy := httputil.NewSingleHostReverseProxy(target)
-	var r io.ReadCloser
-	var w io.WriteCloser
-	closeBody := func(error) {
-		if w != nil {
-			w.Close()
-		}
+func (proxy *CachedReverseProxy) Serve(req *http.Request, writer http.ResponseWriter) {
+	if proxy.CacheHandler.HandleRequest(req, writer) {
+		return
 	}
-	responseWriterWrapper := NewResponseWriterWrapper(writer, func(statusCode int) io.Writer {
-		if statusCode != 200 {
+	reverseProxy := httputil.NewSingleHostReverseProxy(proxy.Target)
+	reverseProxy.ModifyResponse = func(res *http.Response) error {
+		if !proxy.CacheHandler.ShouldCache(req, res) {
 			return nil
 		}
-		r, w = io.Pipe()
+		r, w := io.Pipe()
+		res.Body = NewReadCloserWrapper(res.Body).
+			SetCopyWriter(w).
+			SetCloseCallback(func(error) {
+				w.Close()
+			})
 		go func() {
 			defer r.Close()
-			bz, err := io.ReadAll(r)
-			if err != nil {
-				fmt.Printf("Error when reading response: %v\n", err)
-				return
-			}
-			proxy.Callback(req, bz)
+			proxy.CacheHandler.DoCache(req, res, r)
 		}()
-		return w
-	})
-	reverseProxy.ModifyResponse = func(res *http.Response) error {
-		res.Body = NewReadCloserWrapper(res.Body, closeBody)
 		return nil
 	}
-	reverseProxy.ServeHTTP(responseWriterWrapper, req)
+	reverseProxy.ServeHTTP(writer, req)
 }
 
-func NewRouterWithProxy(target *url.URL, proxy *InterceptReverseProxy) *gin.Engine {
+func NewRouterWithProxy(proxy *CachedReverseProxy) *gin.Engine {
+	// TODO: remove gin and use builtin net/http handle func
 	engine := gin.New()
 	engine.Use(func(ctx *gin.Context) {
-		proxy.Serve(ctx.Request, ctx.Writer, target)
+		proxy.Serve(ctx.Request, ctx.Writer)
 	})
 	return engine
 }
 
-func Run(target *url.URL, listenAddr []string, proxy *InterceptReverseProxy) error {
-	engine := NewRouterWithProxy(target, proxy)
+func Run(proxy *CachedReverseProxy, listenAddr []string) error {
+	engine := NewRouterWithProxy(proxy)
 	return engine.Run(listenAddr...)
 }

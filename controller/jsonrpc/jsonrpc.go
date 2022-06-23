@@ -3,6 +3,7 @@ package jsonrpc
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/likecoin/likecoin-cosmos-rpc-cache/cache"
 	"github.com/likecoin/likecoin-cosmos-rpc-cache/httpproxy"
@@ -41,7 +42,7 @@ func ParseJsonRPCResponseBody(bz []byte) (*JsonRPCResponse, error) {
 }
 
 type Matcher interface {
-	Match(*JsonRPCRequest) (shouldCache bool, timeoutSeconds uint64)
+	Match(*JsonRPCRequest) (shouldCache bool, timeout time.Duration)
 }
 
 type CacheController struct {
@@ -124,7 +125,7 @@ type All struct {
 	TimeoutSeconds uint64
 }
 
-func (m All) Match(req *JsonRPCRequest) (bool, uint64) {
+func (m All) Match(req *JsonRPCRequest) (bool, time.Duration) {
 	fmt.Printf("Matching JSON RPC request: %v\n", req)
-	return true, m.TimeoutSeconds
+	return true, time.Duration(m.TimeoutSeconds) * time.Second
 }

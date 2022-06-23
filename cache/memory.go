@@ -1,6 +1,9 @@
 package cache
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
 type MemoryCache struct {
 	Map map[string][]byte
@@ -24,7 +27,7 @@ func (cache *MemoryCache) Get(key []byte) ([]byte, error) {
 	return bz, nil
 }
 
-func (cache *MemoryCache) Set(key []byte, value []byte, _ uint64) error {
+func (cache *MemoryCache) Set(key []byte, value []byte, _ time.Duration) error {
 	fmt.Printf("MemoryCache.Set, key='%s', value='%s'\n", string(key), string(value))
 	cache.Map[string(key)] = value
 	return nil

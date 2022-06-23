@@ -38,7 +38,6 @@ func (cache *RedisCache) Get(key []byte) ([]byte, error) {
 	return []byte(value), nil
 }
 
-func (cache *RedisCache) Set(key []byte, value []byte, timeoutSeconds uint64) error {
-	timeout := time.Duration(timeoutSeconds) * time.Second
+func (cache *RedisCache) Set(key []byte, value []byte, timeout time.Duration) error {
 	return cache.Client.SetEX(cache.ContextCreator(), string(key), value, timeout).Err()
 }

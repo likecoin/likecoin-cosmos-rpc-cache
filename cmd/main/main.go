@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"os"
 
+	"github.com/go-redis/redis/v8"
 	"github.com/spf13/cobra"
 
 	"github.com/likecoin/likecoin-cosmos-rpc-cache/cache"
@@ -37,8 +38,11 @@ var rootCmd = &cobra.Command{
 			panic(err)
 		}
 		fmt.Printf("%s, %s, %v\n", redisEndpoint, rpcEndpoint, webListenAddrs)
-		memCache := cache.NewMemoryCache()
-		controller := jsonrpc.NewCacheController("/", memCache).
+		redisClient := redis.NewClient(&redis.Options{
+			Addr: redisEndpoint,
+		})
+		redisCache := cache.NewRedisCache(redisClient)
+		controller := jsonrpc.NewCacheController("/", redisCache).
 			AddMatchers(jsonrpc.All{60})
 
 		proxy := httpproxy.NewCachedReverseProxy(rpcEndpointURL, controller)

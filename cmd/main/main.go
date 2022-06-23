@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/likecoin/likecoin-cosmos-rpc-cache/cache"
+	"github.com/likecoin/likecoin-cosmos-rpc-cache/controller/jsonrpc"
 	"github.com/likecoin/likecoin-cosmos-rpc-cache/httpproxy"
 )
 
@@ -37,8 +38,10 @@ var rootCmd = &cobra.Command{
 		}
 		fmt.Printf("%s, %s, %v\n", redisEndpoint, rpcEndpoint, webListenAddrs)
 		memCache := cache.NewMemoryCache()
-		handler := cache.NewCacheHTTPAdaptor(memCache)
-		proxy := httpproxy.NewCachedReverseProxy(rpcEndpointURL, handler)
+		controller := jsonrpc.NewCacheController("/", memCache).
+			AddMatchers(jsonrpc.All{60})
+
+		proxy := httpproxy.NewCachedReverseProxy(rpcEndpointURL, controller)
 		return httpproxy.Run(proxy, webListenAddrs)
 	},
 }

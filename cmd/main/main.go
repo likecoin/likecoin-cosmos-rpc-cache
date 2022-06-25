@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"net/http"
 	"net/url"
 	"os"
 
@@ -33,11 +34,11 @@ var rootCmd = &cobra.Command{
 		if err != nil {
 			panic(err)
 		}
-		webListenAddrs, err := cmd.Flags().GetStringSlice(cmdWebListenAddr)
+		webListenAddr, err := cmd.Flags().GetString(cmdWebListenAddr)
 		if err != nil {
 			panic(err)
 		}
-		fmt.Printf("%s, %s, %v\n", redisEndpoint, rpcEndpoint, webListenAddrs)
+		fmt.Printf("%s, %s, %v\n", redisEndpoint, rpcEndpoint, webListenAddr)
 		redisClient := redis.NewClient(&redis.Options{
 			Addr: redisEndpoint,
 		})
@@ -46,14 +47,23 @@ var rootCmd = &cobra.Command{
 			AddMatchers(jsonrpc.All{60})
 
 		proxy := httpproxy.NewCachedReverseProxy(rpcEndpointURL, controller)
-		return httpproxy.Run(proxy, webListenAddrs)
+
+		server := http.Server{
+			Addr:    webListenAddr,
+			Handler: proxy,
+		}
+		err = server.ListenAndServe()
+		if err != http.ErrServerClosed {
+			return err
+		}
+		return nil
 	},
 }
 
 func setupFlags() {
 	rootCmd.Flags().String(cmdRPCEndpoint, "localhost:26657", "the Tendermint RPC endpoint")
 	rootCmd.Flags().String(cmdRedisEndpoint, "localhost:6379", "the Redis server endpoint")
-	rootCmd.Flags().StringSlice(cmdWebListenAddr, []string{"0.0.0.0:8080"}, "the address and port for providing web service")
+	rootCmd.Flags().String(cmdWebListenAddr, "0.0.0.0:8080", "the address and port for providing web service")
 }
 
 func main() {

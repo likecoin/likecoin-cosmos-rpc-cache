@@ -6,8 +6,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-
-	"github.com/gin-gonic/gin"
 )
 
 type RequestContent struct {
@@ -69,25 +67,20 @@ func CloneRequestContent(req *http.Request) (*RequestContent, error) {
 	}, nil
 }
 
-func (proxy *CachedReverseProxy) Serve(ctx *gin.Context) {
-	fmt.Printf("Request method: %s\n", ctx.Request.Method)
-	fmt.Printf("Request URL: %s\n", ctx.Request.URL.String())
-	reqContent, err := CloneRequestContent(ctx.Request)
+func (proxy *CachedReverseProxy) ServeHTTP(writer http.ResponseWriter, req *http.Request) {
+	fmt.Printf("Request method: %s\n", req.Method)
+	fmt.Printf("Request URL: %s\n", req.URL.String())
+	reqContent, err := CloneRequestContent(req)
 	if err != nil {
-		ctx.AbortWithError(500, err)
+		writer.WriteHeader(500)
+		writer.Write([]byte(err.Error()))
 		return
 	}
 	cachedResContent := proxy.CacheController.GetCache(reqContent)
 	if cachedResContent != nil {
-		ServeResponseContent(ctx.Writer, cachedResContent)
+		ServeResponseContent(writer, cachedResContent)
 		return
 	}
-	resContent := ServeHTTPReverseProxy(ctx.Request, ctx.Writer, proxy.Target)
+	resContent := ServeHTTPReverseProxy(req, writer, proxy.Target)
 	proxy.CacheController.DoCache(reqContent, &resContent)
-}
-
-func Run(proxy *CachedReverseProxy, listenAddr []string) error {
-	engine := gin.New()
-	engine.Use(proxy.Serve)
-	return engine.Run(listenAddr...)
 }

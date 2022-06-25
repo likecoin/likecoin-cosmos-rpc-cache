@@ -43,8 +43,10 @@ var rootCmd = &cobra.Command{
 			Addr: redisEndpoint,
 		})
 		redisCache := cache.NewRedisCache(redisClient)
-		controller := jsonrpc.NewCacheController("/", redisCache).
+		_ = jsonrpc.NewCacheController("/", redisCache).
 			AddMatchers(jsonrpc.All{60})
+		_ = redisCache
+		controller := httpproxy.DummyController{}
 
 		proxy := httpproxy.NewCachedReverseProxy(rpcEndpointURL, controller)
 

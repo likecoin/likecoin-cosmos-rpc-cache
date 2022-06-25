@@ -5,8 +5,7 @@ import (
 )
 
 type AbciQuery struct {
-	Path           string
-	TimeoutSeconds uint64
+	PathTimeoutSecondsMap map[string]uint64
 }
 
 func (m AbciQuery) Match(req *JsonRPCRequest) (bool, time.Duration) {
@@ -18,8 +17,15 @@ func (m AbciQuery) Match(req *JsonRPCRequest) (bool, time.Duration) {
 		return false, 0
 	}
 	queryPathStr, ok := queryPath.(string)
-	if !ok || queryPathStr != m.Path {
+	if !ok {
 		return false, 0
 	}
-	return true, time.Duration(m.TimeoutSeconds) * time.Second
+	timeoutSeconds, ok := m.PathTimeoutSecondsMap[queryPathStr]
+	if !ok {
+		timeoutSeconds, ok = m.PathTimeoutSecondsMap[""]
+		if !ok {
+			return false, 0
+		}
+	}
+	return true, time.Duration(timeoutSeconds) * time.Second
 }

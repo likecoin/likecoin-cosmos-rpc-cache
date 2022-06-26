@@ -29,6 +29,9 @@ func ParseJsonRPCRequestBody(bz []byte) (*JsonRPCRequest, error) {
 	if err != nil {
 		return nil, err
 	}
+	if jsonRPCReq.Version != "2.0" {
+		return nil, fmt.Errorf("not JSON RPC request (expect '2.0' at 'version' field, got '%s')", jsonRPCReq.Version)
+	}
 	return &jsonRPCReq, nil
 }
 
@@ -47,16 +50,14 @@ type Matcher interface {
 
 type CacheController struct {
 	Cache     cache.Cache
-	UrlPath   string
 	Marshaler Marshaler
 	Matchers  []Matcher
 }
 
 var _ httpproxy.HTTPCacheController = &CacheController{}
 
-func NewCacheController(urlPath string, cache cache.Cache) *CacheController {
+func NewCacheController(cache cache.Cache) *CacheController {
 	return &CacheController{
-		UrlPath:   urlPath,
 		Cache:     cache,
 		Marshaler: DefaultMarshaler{},
 	}
@@ -68,7 +69,11 @@ func (m *CacheController) WithKeyMarshaler(keyMarshaler Marshaler) *CacheControl
 }
 
 func (m *CacheController) AddMatchers(matchers ...Matcher) *CacheController {
-	m.Matchers = append(m.Matchers, matchers...)
+	for _, matcher := range matchers {
+		if matcher != nil {
+			m.Matchers = append(m.Matchers, matcher)
+		}
+	}
 	return m
 }
 
@@ -76,7 +81,9 @@ func (m *CacheController) GetCache(reqContent *httpproxy.RequestContent) *httppr
 	if reqContent.Method != "POST" {
 		return nil
 	}
-	// TODO: check UrlPath
+	if reqContent.URL.Path != "" && reqContent.URL.Path != "/" {
+		return nil
+	}
 	jsonRPCRequest, err := ParseJsonRPCRequestBody(reqContent.Body)
 	if err != nil {
 		return nil

@@ -1,6 +1,7 @@
 package jsonrpc
 
 import (
+	"encoding/json"
 	"time"
 )
 
@@ -28,4 +29,12 @@ func (m AbciQuery) Match(req *JsonRPCRequest) (bool, time.Duration) {
 		}
 	}
 	return true, time.Duration(timeoutSeconds) * time.Second
+}
+
+func (m AbciQuery) MarshalJSON() ([]byte, error) {
+	return json.Marshal(m.PathTimeoutSecondsMap)
+}
+
+func (m AbciQuery) UnmarshalJSON(bz []byte) error {
+	return json.Unmarshal(bz, &m.PathTimeoutSecondsMap)
 }

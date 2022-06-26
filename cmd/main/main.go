@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -18,35 +19,49 @@ const (
 	cmdRPCEndpoint   = "rpc"
 	cmdRedisEndpoint = "redis"
 	cmdWebListenAddr = "listen"
+	cmdConfigPath    = "config"
 )
 
 var rootCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		redisEndpoint, err := cmd.Flags().GetString(cmdRedisEndpoint)
 		if err != nil {
-			panic(err)
+			return err
 		}
 		rpcEndpoint, err := cmd.Flags().GetString(cmdRPCEndpoint)
 		if err != nil {
-			panic(err)
-		}
-		rpcEndpointURL, err := url.Parse(rpcEndpoint)
-		if err != nil {
-			panic(err)
+			return err
 		}
 		webListenAddr, err := cmd.Flags().GetString(cmdWebListenAddr)
 		if err != nil {
-			panic(err)
+			return err
 		}
-		fmt.Printf("%s, %s, %v\n", redisEndpoint, rpcEndpoint, webListenAddr)
+		configPath, err := cmd.Flags().GetString(cmdConfigPath)
+		if err != nil {
+			return err
+		}
+
+		rpcEndpointURL, err := url.Parse(rpcEndpoint)
+		if err != nil {
+			return err
+		}
+
+		configBz, err := os.ReadFile(configPath)
+		if err != nil {
+			return err
+		}
+		config := jsonrpc.Config{}
+		err = json.Unmarshal(configBz, &config)
+		if err != nil {
+			return err
+		}
+
 		redisClient := redis.NewClient(&redis.Options{
 			Addr: redisEndpoint,
 		})
 		redisCache := cache.NewRedisCache(redisClient)
-		_ = jsonrpc.NewCacheController("/", redisCache).
-			AddMatchers(jsonrpc.All{60})
-		_ = redisCache
-		controller := httpproxy.DummyController{}
+		controller := jsonrpc.NewCacheController("/", redisCache).
+			AddMatchers(config.AbciQuery, config.Block, config.JsonRpcMethod)
 
 		proxy := httpproxy.NewCachedReverseProxy(rpcEndpointURL, controller)
 
@@ -66,6 +81,7 @@ func setupFlags() {
 	rootCmd.Flags().String(cmdRPCEndpoint, "localhost:26657", "the Tendermint RPC endpoint")
 	rootCmd.Flags().String(cmdRedisEndpoint, "localhost:6379", "the Redis server endpoint")
 	rootCmd.Flags().String(cmdWebListenAddr, "0.0.0.0:8080", "the address and port for providing web service")
+	rootCmd.Flags().String(cmdConfigPath, "config.json", "the path to config file")
 }
 
 func main() {

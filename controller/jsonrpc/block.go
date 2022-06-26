@@ -5,8 +5,8 @@ import (
 )
 
 type Block struct {
-	LatestBlockTimeoutSeconds   uint64
-	SpecificBlockTimeoutSeconds uint64
+	LatestBlockTimeoutSeconds   uint64 `json:"latest_block"`
+	SpecificBlockTimeoutSeconds uint64 `json:"specific_block"`
 }
 
 func (m Block) getLatestHeight() (bool, time.Duration) {

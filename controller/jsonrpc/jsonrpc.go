@@ -121,6 +121,8 @@ func (m *CacheController) DoCache(reqContent *httpproxy.RequestContent, resConte
 			if err != nil {
 				return
 			}
+			resContent.Header["X-LIKECOIN-CACHE-AT"] = []string{time.Now().UTC().Format(time.RFC1123)}
+			resContent.Header["X-LIKECOIN-CACHE-EXPIRY"] = []string{time.Now().Add(timeout).UTC().Format(time.RFC1123)}
 			value, err := m.Marshaler.MarshalValue(resContent)
 			if err != nil {
 				return

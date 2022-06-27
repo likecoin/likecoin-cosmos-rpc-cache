@@ -13,6 +13,7 @@ import (
 	"github.com/likecoin/likecoin-cosmos-rpc-cache/cache"
 	"github.com/likecoin/likecoin-cosmos-rpc-cache/controller/jsonrpc"
 	"github.com/likecoin/likecoin-cosmos-rpc-cache/httpproxy"
+	"github.com/likecoin/likecoin-cosmos-rpc-cache/log"
 )
 
 const (
@@ -37,6 +38,10 @@ var rootCmd = &cobra.Command{
 			return err
 		}
 		configPath, err := cmd.Flags().GetString(cmdConfigPath)
+		if err != nil {
+			return err
+		}
+		err = log.SetupFromCmd(cmd)
 		if err != nil {
 			return err
 		}
@@ -82,6 +87,7 @@ func setupFlags() {
 	rootCmd.Flags().String(cmdRedisEndpoint, "localhost:6379", "the Redis server endpoint")
 	rootCmd.Flags().String(cmdWebListenAddr, "0.0.0.0:8080", "the address and port for providing web service")
 	rootCmd.Flags().String(cmdConfigPath, "config.json", "the path to config file")
+	log.AddFlagsForCmd(rootCmd)
 }
 
 func main() {

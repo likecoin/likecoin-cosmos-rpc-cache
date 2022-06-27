@@ -14,6 +14,8 @@ services:
       "--rpc", "http://somewhere:26657/",
       "--redis", "redis:6379",
       "--listen", "0.0.0.0:8080",
-      "--config", "/config.json"
+      "--config", "/config.json",
+      "--log-level", "info",
+      "--log-outputs", "stderr",
     ]
     restart: always

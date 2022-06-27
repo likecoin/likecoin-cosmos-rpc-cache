@@ -7,10 +7,13 @@ services:
     build: .
     ports:
       - 8080:8080
+    volumes:
+      - "./config.json:/config.json"
     command: [
       "/bin/main",
       "--rpc", "http://somewhere:26657/",
       "--redis", "redis:6379",
-      "--listen", "0.0.0.0:8080"
+      "--listen", "0.0.0.0:8080",
+      "--config", "/config.json"
     ]
     restart: always

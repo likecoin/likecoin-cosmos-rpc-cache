@@ -1,0 +1,11 @@
+{
+    "abci_query": {
+      "/cosmos.auth.v1beta1.Query/Account": 10
+    },
+    "block": {
+        "latest": 5,
+        "specific": 1e9
+    },
+    "method": {
+    }
+}

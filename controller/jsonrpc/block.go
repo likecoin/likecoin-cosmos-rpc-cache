@@ -18,7 +18,7 @@ func (m Block) getSpecificHeight() (bool, time.Duration) {
 }
 
 func (m Block) Match(req *JsonRPCRequest) (bool, time.Duration) {
-	if req.Method != "block" {
+	if req.Method != "block" && req.Method != "block_result" {
 		return false, 0
 	}
 	queryHeight, ok := req.Params["height"]

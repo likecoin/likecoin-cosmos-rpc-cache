@@ -6,6 +6,6 @@
         "latest": 5,
         "specific": 1e9
     },
-    "method": {
+    "jsonrpc_method": {
     }
 }

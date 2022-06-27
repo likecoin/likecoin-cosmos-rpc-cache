@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -20,7 +19,6 @@ const (
 	cmdRPCEndpoint   = "rpc"
 	cmdRedisEndpoint = "redis"
 	cmdWebListenAddr = "listen"
-	cmdConfigPath    = "config"
 )
 
 var rootCmd = &cobra.Command{
@@ -37,10 +35,6 @@ var rootCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		configPath, err := cmd.Flags().GetString(cmdConfigPath)
-		if err != nil {
-			return err
-		}
 		err = log.SetupFromCmd(cmd)
 		if err != nil {
 			return err
@@ -50,23 +44,16 @@ var rootCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-
-		configBz, err := os.ReadFile(configPath)
+		jsonRpcConfig, err := jsonrpc.GetConfigFromCmd(cmd)
 		if err != nil {
 			return err
 		}
-		config := jsonrpc.Config{}
-		err = json.Unmarshal(configBz, &config)
-		if err != nil {
-			return err
-		}
-
 		redisClient := redis.NewClient(&redis.Options{
 			Addr: redisEndpoint,
 		})
 		redisCache := cache.NewRedisCache(redisClient)
 		controller := jsonrpc.NewCacheController(redisCache).
-			AddMatchers(config.AbciQuery, config.Block, config.JsonRpcMethod)
+			AddMatchers(jsonRpcConfig.Matchers()...)
 
 		proxy := httpproxy.NewCachedReverseProxy(rpcEndpointURL, controller)
 
@@ -74,6 +61,9 @@ var rootCmd = &cobra.Command{
 			Addr:    webListenAddr,
 			Handler: proxy,
 		}
+
+		log.L.Debugw("app initialized", "config", jsonRpcConfig)
+
 		err = server.ListenAndServe()
 		if err != http.ErrServerClosed {
 			return err
@@ -86,8 +76,8 @@ func setupFlags() {
 	rootCmd.Flags().String(cmdRPCEndpoint, "localhost:26657", "the Tendermint RPC endpoint")
 	rootCmd.Flags().String(cmdRedisEndpoint, "localhost:6379", "the Redis server endpoint")
 	rootCmd.Flags().String(cmdWebListenAddr, "0.0.0.0:8080", "the address and port for providing web service")
-	rootCmd.Flags().String(cmdConfigPath, "config.json", "the path to config file")
 	log.AddFlagsForCmd(rootCmd)
+	jsonrpc.AddFlagsForCmd(rootCmd)
 }
 
 func main() {

@@ -7,6 +7,7 @@ import (
 
 	"github.com/likecoin/likecoin-cosmos-rpc-cache/cache"
 	"github.com/likecoin/likecoin-cosmos-rpc-cache/httpproxy"
+	"github.com/likecoin/likecoin-cosmos-rpc-cache/log"
 )
 
 type JsonRPCRequest struct {
@@ -71,6 +72,7 @@ func (m *CacheController) WithKeyMarshaler(keyMarshaler Marshaler) *CacheControl
 func (m *CacheController) AddMatchers(matchers ...Matcher) *CacheController {
 	for _, matcher := range matchers {
 		if matcher != nil {
+			log.L.Debugw("adding matcher", "matcher", matcher)
 			m.Matchers = append(m.Matchers, matcher)
 		}
 	}
@@ -92,6 +94,7 @@ func (m *CacheController) GetCache(reqContent *httpproxy.RequestContent) *httppr
 	if err != nil {
 		return nil
 	}
+	log.L.Debugw("getting JSON RPC cache", "request", jsonRPCRequest, "key", string(key))
 	jsonRPCResponseBytes, err := m.Cache.Get(key)
 	if err != nil {
 		return nil
@@ -112,7 +115,7 @@ func (m *CacheController) DoCache(reqContent *httpproxy.RequestContent, resConte
 		return
 	}
 	for _, matcher := range m.Matchers {
-		shouldCache, timeoutSeconds := matcher.Match(jsonRPCRequest)
+		shouldCache, timeout := matcher.Match(jsonRPCRequest)
 		if shouldCache {
 			key, err := m.Marshaler.MarshalKey(jsonRPCRequest)
 			if err != nil {
@@ -122,7 +125,8 @@ func (m *CacheController) DoCache(reqContent *httpproxy.RequestContent, resConte
 			if err != nil {
 				return
 			}
-			m.Cache.Set(key, value, timeoutSeconds)
+			log.L.Debugw("caching JSON RPC response", "key", string(key), "value", string(value), "timeout", timeout.Seconds())
+			m.Cache.Set(key, value, timeout)
 			return
 		}
 	}

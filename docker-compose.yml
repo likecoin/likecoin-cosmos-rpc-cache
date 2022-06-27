@@ -8,13 +8,13 @@ services:
     ports:
       - 8080:8080
     volumes:
-      - "./config.json:/config.json"
+      - "./jsonrpc-config.json:/jsonrpc-config.json"
     command: [
       "/bin/main",
       "--rpc", "http://somewhere:26657/",
       "--redis", "redis:6379",
       "--listen", "0.0.0.0:8080",
-      "--config", "/config.json",
+      "--jsonrpc-config-file", "/jsonrpc-config.json",
       "--log-level", "info",
       "--log-outputs", "stderr",
     ]

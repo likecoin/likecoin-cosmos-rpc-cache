@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+
+	"github.com/likecoin/likecoin-cosmos-rpc-cache/log"
 )
 
 type ResponseWriterWrapper struct {
@@ -66,10 +68,9 @@ func ServeResponseContent(writer http.ResponseWriter, content *ResponseContent) 
 	}
 	header.Set("Content-Length", fmt.Sprintf("%d", len(body)))
 	writer.WriteHeader(content.StatusCode)
-	fmt.Printf("ServeResponseContent: len = %d, content = '%s'\n", len(body), string(body))
+	log.L.Debugw("reverse proxy serving content", "length", len(body), "content", string(body))
 	for len(body) > 0 {
 		n, err := writer.Write(body)
-		fmt.Printf("ServeResponseContent: after write, n = %d, err = %v\n", n, err)
 		if err != nil {
 			return err
 		}

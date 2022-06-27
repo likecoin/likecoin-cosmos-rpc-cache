@@ -24,6 +24,6 @@ func (m JsonRpcMethod) MarshalJSON() ([]byte, error) {
 	return json.Marshal(m.MethodTimeoutSecondsMap)
 }
 
-func (m JsonRpcMethod) UnmarshalJSON(bz []byte) error {
+func (m *JsonRpcMethod) UnmarshalJSON(bz []byte) error {
 	return json.Unmarshal(bz, &m.MethodTimeoutSecondsMap)
 }

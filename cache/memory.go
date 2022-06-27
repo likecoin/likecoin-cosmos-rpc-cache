@@ -1,7 +1,6 @@
 package cache
 
 import (
-	"fmt"
 	"time"
 )
 
@@ -20,15 +19,12 @@ func NewMemoryCache() *MemoryCache {
 func (cache *MemoryCache) Get(key []byte) ([]byte, error) {
 	bz, ok := cache.Map[string(key)]
 	if !ok {
-		fmt.Println("MemoryCache.Get returning ErrNotFound")
 		return nil, ErrNotFound
 	}
-	fmt.Printf("MemoryCache.Get returning bytes '%s'\n", string(bz))
 	return bz, nil
 }
 
 func (cache *MemoryCache) Set(key []byte, value []byte, _ time.Duration) error {
-	fmt.Printf("MemoryCache.Set, key='%s', value='%s'\n", string(key), string(value))
 	cache.Map[string(key)] = value
 	return nil
 }

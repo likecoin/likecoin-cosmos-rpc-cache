@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/go-redis/redis/v8"
+
+	"github.com/likecoin/likecoin-cosmos-rpc-cache/log"
 )
 
 type RedisCache struct {
@@ -32,12 +34,16 @@ func (cache *RedisCache) Get(key []byte) ([]byte, error) {
 		if err == redis.Nil {
 			return nil, ErrNotFound
 		}
-		// TODO: log
+		log.L.Warnw("error when getting from Redis cache", "error", err, "key", string(key))
 		return nil, err
 	}
 	return []byte(value), nil
 }
 
 func (cache *RedisCache) Set(key []byte, value []byte, timeout time.Duration) error {
-	return cache.Client.SetEX(cache.ContextCreator(), string(key), value, timeout).Err()
+	err := cache.Client.SetEX(cache.ContextCreator(), string(key), value, timeout).Err()
+	if err != nil {
+		log.L.Warnw("error when setting Redis cache", "error", err, "key", string(key), "value", string(value), "timeout", timeout.String())
+	}
+	return err
 }

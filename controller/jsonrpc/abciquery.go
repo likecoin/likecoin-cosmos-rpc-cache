@@ -3,6 +3,8 @@ package jsonrpc
 import (
 	"encoding/json"
 	"time"
+
+	"github.com/likecoin/likecoin-cosmos-rpc-cache/log"
 )
 
 type AbciQuery struct {
@@ -21,6 +23,7 @@ func (m AbciQuery) Match(req *JsonRPCRequest) (bool, time.Duration) {
 	if !ok {
 		return false, 0
 	}
+	log.L.Debugw("matched abci_query", "path", queryPathStr)
 	timeoutSeconds, ok := m.PathTimeoutSecondsMap[queryPathStr]
 	if !ok {
 		timeoutSeconds, ok = m.PathTimeoutSecondsMap[""]
@@ -35,6 +38,6 @@ func (m AbciQuery) MarshalJSON() ([]byte, error) {
 	return json.Marshal(m.PathTimeoutSecondsMap)
 }
 
-func (m AbciQuery) UnmarshalJSON(bz []byte) error {
+func (m *AbciQuery) UnmarshalJSON(bz []byte) error {
 	return json.Unmarshal(bz, &m.PathTimeoutSecondsMap)
 }

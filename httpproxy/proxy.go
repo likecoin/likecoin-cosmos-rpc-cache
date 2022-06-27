@@ -2,10 +2,11 @@ package httpproxy
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
+
+	"github.com/likecoin/likecoin-cosmos-rpc-cache/log"
 )
 
 type RequestContent struct {
@@ -68,19 +69,22 @@ func CloneRequestContent(req *http.Request) (*RequestContent, error) {
 }
 
 func (proxy *CachedReverseProxy) ServeHTTP(writer http.ResponseWriter, req *http.Request) {
-	fmt.Printf("Request method: %s\n", req.Method)
-	fmt.Printf("Request URL: %s\n", req.URL.String())
+	log.L.Debugw("cache reverse proxy serving HTTP", "method", req.Method, "url", req.URL.String())
 	reqContent, err := CloneRequestContent(req)
 	if err != nil {
+		log.L.Errorw("fail to get request content", "error", err)
 		writer.WriteHeader(500)
 		writer.Write([]byte(err.Error()))
 		return
 	}
 	cachedResContent := proxy.CacheController.GetCache(reqContent)
 	if cachedResContent != nil {
-		ServeResponseContent(writer, cachedResContent)
-		return
+		err := ServeResponseContent(writer, cachedResContent)
+		if err != nil {
+			log.L.Errorw("error when serving content", "error", err)
+		}
+	} else {
+		resContent := ServeHTTPReverseProxy(req, writer, proxy.Target)
+		proxy.CacheController.DoCache(reqContent, &resContent)
 	}
-	resContent := ServeHTTPReverseProxy(req, writer, proxy.Target)
-	proxy.CacheController.DoCache(reqContent, &resContent)
 }

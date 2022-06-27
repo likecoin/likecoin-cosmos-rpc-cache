@@ -116,7 +116,7 @@ func (m *CacheController) DoCache(reqContent *httpproxy.RequestContent, resConte
 	}
 	for _, matcher := range m.Matchers {
 		shouldCache, timeout := matcher.Match(jsonRPCRequest)
-		if shouldCache {
+		if shouldCache && timeout > 0 {
 			key, err := m.Marshaler.MarshalKey(jsonRPCRequest)
 			if err != nil {
 				return

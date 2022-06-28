@@ -72,7 +72,6 @@ func (m *CacheController) WithKeyMarshaler(keyMarshaler Marshaler) *CacheControl
 func (m *CacheController) AddMatchers(matchers ...Matcher) *CacheController {
 	for _, matcher := range matchers {
 		if matcher != nil {
-			log.L.Debugw("adding matcher", "matcher", matcher)
 			m.Matchers = append(m.Matchers, matcher)
 		}
 	}

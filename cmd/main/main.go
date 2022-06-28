@@ -62,8 +62,6 @@ var rootCmd = &cobra.Command{
 			Handler: proxy,
 		}
 
-		log.L.Debugw("app initialized", "config", jsonRpcConfig)
-
 		err = server.ListenAndServe()
 		if err != http.ErrServerClosed {
 			return err

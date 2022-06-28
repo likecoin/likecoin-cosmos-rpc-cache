@@ -102,6 +102,7 @@ func (m *CacheController) GetCache(reqContent *httpproxy.RequestContent) *httppr
 	if err != nil {
 		return nil
 	}
+	log.L.Debugw("got cache", "response_header", resContent.Header)
 	return resContent
 }
 
@@ -120,8 +121,8 @@ func (m *CacheController) DoCache(reqContent *httpproxy.RequestContent, resConte
 			if err != nil {
 				return
 			}
-			resContent.Header["X-LIKECOIN-CACHE-AT"] = []string{time.Now().UTC().Format(time.RFC1123)}
-			resContent.Header["X-LIKECOIN-CACHE-EXPIRY"] = []string{time.Now().Add(timeout).UTC().Format(time.RFC1123)}
+			resContent.Header["X-LikeCoin-Cache-Time"] = []string{time.Now().UTC().Format(time.RFC3339)}
+			resContent.Header["X-LikeCoin-Cache-Expiry"] = []string{time.Now().Add(timeout).UTC().Format(time.RFC3339)}
 			value, err := m.Marshaler.MarshalValue(resContent)
 			if err != nil {
 				return

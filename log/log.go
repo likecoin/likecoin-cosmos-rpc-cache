@@ -23,8 +23,13 @@ func init() {
 
 func Setup(level zapcore.Level, logOutputs []string) error {
 	config := zap.NewProductionConfig()
+	config.Encoding = "console"
+	config.DisableCaller = true
+	config.DisableStacktrace = true
+	config.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 	config.Level = zap.NewAtomicLevelAt(level)
 	config.OutputPaths = logOutputs
+	config.ErrorOutputPaths = logOutputs
 	logger, err := config.Build()
 	if err != nil {
 		return err

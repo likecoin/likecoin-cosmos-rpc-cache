@@ -1,5 +1,7 @@
 const axios = require('axios');
 const express = require('express');
+const http = require('http');
+const https = require('https');
 const jsonStringify = require('fast-json-stable-stringify');
 
 const { axiosOptions } = require('./config.js');
@@ -10,6 +12,8 @@ class CachedJsonRpcProxy {
     this.api = axios.create({
       baseURL: rpcEndpoint,
       validateStatus: false,
+      httpAgent: new http.Agent({ keepAlive: true }),
+      httpsAgent: new https.Agent({ keepAlive: true }),
       ...axiosOptions,
     });
     this.cache = cache;
@@ -58,9 +62,9 @@ class CachedJsonRpcProxy {
         if (proxyRes.status !== 200 || proxyRes.data.error) {
           return;
         }
-        const timeout = match(jsonRpcRequest, this.matchers)
-        if (timeout > 0) {
-          this.cache.set(key, jsonStringify(proxyRes.data.result), timeout);
+        const ttlSeconds = match(jsonRpcRequest, this.matchers)
+        if (ttlSeconds > 0) {
+          this.cache.set(key, jsonStringify(proxyRes.data.result), ttlSeconds);
           return;
         }
       });

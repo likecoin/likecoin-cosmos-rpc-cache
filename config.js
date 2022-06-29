@@ -1,9 +1,18 @@
+const http = require('http');
+const https = require('https');
+
 const { method, abciQuery } = require('./matcher.js');
 
 module.exports = {
   listenAddr: {
     port: 8080,
     hostname: '0.0.0.0',
+  },
+  // axiosOptions are the options of the proxy request
+  axiosOptions: {
+    timeout: 60000, // 60s
+    httpAgent: new http.Agent({ keepAlive: true }),
+    httpsAgent: new https.Agent({ keepAlive: true }),
   },
   rpcEndpoint: 'http://localhost:26657/',
   redisConfig: {

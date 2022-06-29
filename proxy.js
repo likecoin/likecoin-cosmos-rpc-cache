@@ -2,12 +2,15 @@ const axios = require('axios');
 const express = require('express');
 const jsonStringify = require('fast-json-stable-stringify');
 
+const { axiosOptions } = require('./config.js');
+
 const { match } = require('./matcher.js');
 class CachedJsonRpcProxy {
   constructor(rpcEndpoint, cache) {
     this.api = axios.create({
       baseURL: rpcEndpoint,
       validateStatus: false,
+      ...axiosOptions,
     });
     this.cache = cache;
     this.matchers = [];

@@ -2,11 +2,22 @@ const axios = require('axios');
 const express = require('express');
 const http = require('http');
 const https = require('https');
+const { createHash } = require('crypto');
 const jsonStringify = require('fast-json-stable-stringify');
 
 const { axiosOptions } = require('./config.js');
 
 const { match } = require('./matcher.js');
+
+function getKey(jsonRpcRequest) {
+  const key = jsonStringify(jsonRpcRequest);
+  if (process.env.NODE_ENV === 'development') {
+    return jsonStringify(jsonRpcRequest);
+  }
+  const hash = createHash('sha1');
+  return hash.update(key).digest('base64')
+}
+
 class CachedJsonRpcProxy {
   constructor(rpcEndpoint, cache) {
     this.api = axios.create({
@@ -47,7 +58,7 @@ class CachedJsonRpcProxy {
           return;
         }
         const jsonRpcRequest = { method: req.body.method, params: req.body.params };
-        const key = jsonStringify(jsonRpcRequest)
+        const key = getKey(jsonRpcRequest)
         const cachedResult = await this.cache.get(key);
         if (cachedResult) {
           const resBody = {

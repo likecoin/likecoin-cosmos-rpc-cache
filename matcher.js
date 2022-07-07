@@ -22,7 +22,7 @@ function method(methodName, ...subMatchers) {
 
 function abciQuery(path, ...subMatchers) {
   return (jsonRpcRequest) => {
-    if (jsonRpcRequest.params.path !== path) {
+    if (jsonRpcRequest.params?.path !== path) {
       return 0;
     }
     return match(jsonRpcRequest, subMatchers);

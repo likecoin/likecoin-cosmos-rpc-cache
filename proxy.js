@@ -51,7 +51,7 @@ class CachedJsonRpcProxy {
   }
 
   getExpressMiddleware() {
-    return async (req, res, ) => {
+    return async (req, res) => {
       express.json()(req, res, async () => {
         if (req.method !== 'POST') {
           this._forwardRequest(req, res);
@@ -73,10 +73,18 @@ class CachedJsonRpcProxy {
         if (proxyRes.status !== 200 || proxyRes.data.error) {
           return;
         }
-        const ttlSeconds = match(jsonRpcRequest, this.matchers)
-        if (ttlSeconds > 0) {
-          this.cache.set(key, jsonStringify(proxyRes.data.result), ttlSeconds);
-          return;
+        const { result } = proxyRes.data;
+        if (result) {
+          const ttlSeconds = match(jsonRpcRequest, this.matchers)
+          if (ttlSeconds > 0) {
+            const value = jsonStringify(result);
+            this.cache.set(key, value, ttlSeconds)
+              .catch((err) => {
+                console.error(`cannot set key ${key} to ${value}`);
+                console.error(err);
+              });
+            return;
+          }
         }
       });
     }

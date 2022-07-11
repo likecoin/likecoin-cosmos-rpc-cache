@@ -78,11 +78,12 @@ class CachedJsonRpcProxy {
           const ttlSeconds = match(jsonRpcRequest, this.matchers)
           if (ttlSeconds > 0) {
             const value = jsonStringify(result);
-            this.cache.set(key, value, ttlSeconds)
-              .catch((err) => {
-                console.error(`cannot set key ${key} to ${value}`);
-                console.error(err);
-              });
+            try {
+              await this.cache.set(key, value, ttlSeconds);
+            } catch (error) {
+              console.error(`cannot set key ${key} to ${value}`);
+              console.error(err);
+            }
             return;
           }
         }

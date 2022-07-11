@@ -41,12 +41,16 @@ class CachedJsonRpcProxy {
   }
 
   async _forwardRequest(req, res) {
-    const proxyRes = await this.api({
-      method: req.method,
-      url: req.url,
-      data: req.body,
-    });
-    res.status(proxyRes.status).json(proxyRes.data).end();
+    const { method, url, body } = req;
+    const config = {
+      method,
+      url,
+    }
+    if (method === 'POST') {
+      config.data = body;
+    }
+    const proxyRes = await this.api(config);
+    res.status(proxyRes.status).set(proxyRes.headers).send(proxyRes.data).end();
     return proxyRes;
   }
 

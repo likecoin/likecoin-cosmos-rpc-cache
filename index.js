@@ -30,5 +30,6 @@ proxy.addMatchers(...getMatchersFromConfig(matchersConfig));
 
 const app = express();
 
+app.get('/healthz', (req, res) => res.sendStatus(200));
 app.use(proxy.getExpressMiddleware());
 app.listen(listenAddr.port, listenAddr.hostname);

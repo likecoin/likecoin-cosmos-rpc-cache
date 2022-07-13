@@ -55,8 +55,11 @@ class CachedJsonRpcProxy {
   }
 
   getExpressMiddleware() {
+    const bodyParser = express.json({
+      limit: '100mb',
+    });
     return async (req, res) => {
-      express.json()(req, res, async () => {
+      bodyParser(req, res, async () => {
         if (req.method !== 'POST') {
           this._forwardRequest(req, res);
           return;

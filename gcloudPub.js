@@ -6,8 +6,13 @@ const {
 } = require('./constant');
 
 const { pubsub: config } = require('./config');
+const serviceAccount = require('./serviceAccountKey.json');
 
-const pubsub = new PubSub();
+const pubsub = new PubSub({
+  projectId: serviceAccount.project_id,
+  credentials: serviceAccount,
+});
+
 const topics = [
   PUBSUB_TOPIC_MISC,
   PUBSUB_TOPIC_MONITOR,

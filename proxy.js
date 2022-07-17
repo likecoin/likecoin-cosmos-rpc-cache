@@ -69,6 +69,7 @@ class CachedJsonRpcProxy {
       bodyParser(req, res, async () => {
         try {
           monitorLogger.append({
+            logType: 'eventProxyRequest',
             httpMethod: req.method,
             httpURL: req.url.toString(),
           });
@@ -108,7 +109,7 @@ class CachedJsonRpcProxy {
                 await this.cache.set(key, value, ttlSeconds);
               } catch (error) {
                 miscLogger.append({
-                  type: 'CACHE_SET_ERROR',
+                  logType: 'eventCacheError',
                   error,
                   // TODO: more details of the request
                 });

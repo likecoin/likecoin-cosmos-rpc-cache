@@ -5,8 +5,8 @@ const {
   PUBSUB_TOPIC_MONITOR,
 } = require('./constant');
 
-const { pubsub: config } = require('./config');
-const serviceAccount = require('./serviceAccountKey.json');
+const { pubsub: config } = require('./config/config');
+const serviceAccount = require('./config/serviceAccountKey.json');
 
 const pubsub = new PubSub({
   projectId: serviceAccount.project_id,

@@ -8,7 +8,7 @@ const {
   rpcEndpoint,
   redisConfig,
   cache: matchersConfig,
-} = require('./config');
+} = require('./config/config');
 const { method, abciQuery } = require('./matcher');
 
 function getMatchersFromConfig(config) {

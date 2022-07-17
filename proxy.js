@@ -5,7 +5,7 @@ const https = require('https');
 const { createHash } = require('crypto');
 const jsonStringify = require('fast-json-stable-stringify');
 
-const { axiosOptions } = require('./config');
+const { axiosOptions } = require('./config/config');
 const { match } = require('./matcher');
 const { getPubsubLogger } = require('./gcloudPub');
 const { PUBSUB_TOPIC_MISC, PUBSUB_TOPIC_MONITOR } = require('./constant');

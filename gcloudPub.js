@@ -64,7 +64,7 @@ function getPubsubLogger(topic) {
       const payload = accumulatedPayload;
       accumulatedPayload = {};
       if (Object.keys(payload).length > 0) {
-        await publisher.publishTopic(topic, payload);
+        await publisher.publish(topic, payload);
       }
     },
   };

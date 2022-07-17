@@ -115,10 +115,10 @@ class CachedJsonRpcProxy {
                   error,
                   // TODO: more details of the request
                 });
-                /* eslint-disable no-console */
+                // eslint-disable-next-line no-console
                 console.error(`cannot set key ${key} to ${value}`);
+                // eslint-disable-next-line no-console
                 console.error(error);
-                /* eslint-enable no-console */
               }
               return;
             }

@@ -60,11 +60,11 @@ function getPubsubLogger(topic) {
       Object.assign(accumulatedPayload, payload);
       return this;
     },
-    commit() {
+    async commit() {
       const payload = accumulatedPayload;
       accumulatedPayload = {};
       if (Object.keys(payload).length > 0) {
-        publisher.publishTopic(topic, payload);
+        await publisher.publishTopic(topic, payload);
       }
     },
   };

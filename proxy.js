@@ -78,8 +78,10 @@ class CachedJsonRpcProxy {
             return;
           }
           const jsonRpcRequest = { method: req.body.method, params: req.body.params };
-          monitorLogger.append({ jsonRpcRequest });
-          // TODO: parse jsonRpcRequest
+          monitorLogger.append({
+            jsonRpcMethod: jsonRpcRequest.method,
+            // TODO: parse jsonRpcRequest
+          });
           const key = getKey(jsonRpcRequest);
           const cachedResult = await this.cache.get(key);
           monitorLogger.append({ cacheHit: !!cachedResult });

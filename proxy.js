@@ -9,6 +9,7 @@ const { axiosOptions } = require('./config/config');
 const { match } = require('./matcher');
 const { getPubsubLogger } = require('./gcloudPub');
 const { PUBSUB_TOPIC_MISC, PUBSUB_TOPIC_MONITOR } = require('./constant');
+const { parseJsonRpcRequest } = require('./cosmos');
 
 function getKey(jsonRpcRequest) {
   const key = jsonStringify(jsonRpcRequest);
@@ -81,10 +82,8 @@ class CachedJsonRpcProxy {
             return;
           }
           const jsonRpcRequest = { method: req.body.method, params: req.body.params };
-          monitorLogger.append({
-            jsonRpcMethod: jsonRpcRequest.method,
-            // TODO: parse jsonRpcRequest
-          });
+          const parsedJsonRpcRequest = parseJsonRpcRequest(jsonRpcRequest);
+          monitorLogger.append(parsedJsonRpcRequest);
           const key = getKey(jsonRpcRequest);
           const cachedResult = await this.cache.get(key);
           monitorLogger.append({ cacheHit: !!cachedResult });

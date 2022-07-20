@@ -130,4 +130,10 @@ module.exports = {
     },
     default: 10,
   },
+  pubsub: {
+    GCLOUD_PUBSUB_ENABLE: true,
+    GCLOUD_PUBSUB_MAX_MESSAGES: 10,
+    GCLOUD_PUBSUB_MAX_WAIT: 1000,
+    APP_SERVER: 'json-rpc-cache',
+  },
 };

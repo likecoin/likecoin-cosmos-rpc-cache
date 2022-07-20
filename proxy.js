@@ -6,8 +6,9 @@ const { createHash } = require('crypto');
 const jsonStringify = require('fast-json-stable-stringify');
 
 const { axiosOptions } = require('./config.js');
-
 const { match } = require('./matcher.js');
+const { getPubsubLogger } = require('./gcloudPub.js');
+const { PUBSUB_TOPIC_MISC, PUBSUB_TOPIC_MONITOR } = require('./constant.js');
 
 function getKey(jsonRpcRequest) {
   const key = jsonStringify(jsonRpcRequest);
@@ -62,40 +63,65 @@ class CachedJsonRpcProxy {
       limit: '100mb',
     });
     return async (req, res) => {
+      const miscLogger = getPubsubLogger(PUBSUB_TOPIC_MISC);
+      const monitorLogger = getPubsubLogger(PUBSUB_TOPIC_MONITOR);
+      const startTime = Date.now();
       bodyParser(req, res, async () => {
-        if (req.method !== 'POST') {
-          this._forwardRequest(req, res);
-          return;
-        }
-        const jsonRpcRequest = { method: req.body.method, params: req.body.params };
-        const key = getKey(jsonRpcRequest)
-        const cachedResult = await this.cache.get(key);
-        if (cachedResult) {
-          const resBody = {
-            jsonrpc: '2.0',
-            id: req.body.id,
-            result: JSON.parse(cachedResult),
-          };
-          res.status(200).json(resBody).end();
-          return;
-        }
-        const proxyRes = await this._forwardRequest(req, res);
-        if (proxyRes.status !== 200 || proxyRes.data.error) {
-          return;
-        }
-        const { result } = proxyRes.data;
-        if (result) {
-          const ttlSeconds = match(jsonRpcRequest, this.matchers)
-          if (ttlSeconds > 0) {
-            const value = jsonStringify(result);
-            try {
-              await this.cache.set(key, value, ttlSeconds);
-            } catch (error) {
-              console.error(`cannot set key ${key} to ${value}`);
-              console.error(err);
-            }
+        try {
+          monitorLogger.append({
+            httpMethod: req.method,
+            httpURL: req.url.toString()
+          });
+          if (req.method !== 'POST') {
+            await this._forwardRequest(req, res);
             return;
           }
+          const jsonRpcRequest = { method: req.body.method, params: req.body.params };
+          monitorLogger.append({ jsonRpcRequest });
+          // TODO: parse jsonRpcRequest
+          const key = getKey(jsonRpcRequest)
+          const cachedResult = await this.cache.get(key);
+          monitorLogger.append({ cacheHit: !!cacheResult });
+          if (cachedResult) {
+            const resBody = {
+              jsonrpc: '2.0',
+              id: req.body.id,
+              result: JSON.parse(cachedResult),
+            };
+            res.status(200).json(resBody).end();
+            return;
+          }
+          const forwardStart = Date.now();
+          const proxyRes = await this._forwardRequest(req, res);
+          monitorLogger.append({
+            forwardDurationMs: Date.now() - forwardStart,
+          });
+          if (proxyRes.status !== 200 || proxyRes.data.error) {
+            return;
+          }
+          const { result } = proxyRes.data;
+          if (result) {
+            const ttlSeconds = match(jsonRpcRequest, this.matchers)
+            if (ttlSeconds > 0) {
+              const value = jsonStringify(result);
+              try {
+                await this.cache.set(key, value, ttlSeconds);
+              } catch (error) {
+                miscLogger.append({
+                  timestampMs: startTime,
+                  type: 'CACHE_SET_ERROR',
+                  error,
+                })
+                console.error(`cannot set key ${key} to ${value}`);
+                console.error(error);
+              }
+              return;
+            }
+          }
+        } finally {
+          monitorLogger.append({ processDurationMs: Date.now() - timestamp });
+          miscLogger.commit();
+          monitorLogger.commit();
         }
       });
     }

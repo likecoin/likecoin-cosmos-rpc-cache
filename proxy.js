@@ -5,10 +5,10 @@ const https = require('https');
 const { createHash } = require('crypto');
 const jsonStringify = require('fast-json-stable-stringify');
 
-const { axiosOptions } = require('./config.js');
-const { match } = require('./matcher.js');
-const { getPubsubLogger } = require('./gcloudPub.js');
-const { PUBSUB_TOPIC_MISC, PUBSUB_TOPIC_MONITOR } = require('./constant.js');
+const { axiosOptions } = require('./config');
+const { match } = require('./matcher');
+const { getPubsubLogger } = require('./gcloudPub');
+const { PUBSUB_TOPIC_MISC, PUBSUB_TOPIC_MONITOR } = require('./constant');
 
 function getKey(jsonRpcRequest) {
   const key = jsonStringify(jsonRpcRequest);
@@ -16,7 +16,7 @@ function getKey(jsonRpcRequest) {
     return jsonStringify(jsonRpcRequest);
   }
   const hash = createHash('sha1');
-  return hash.update(key).digest('base64')
+  return hash.update(key).digest('base64');
 }
 
 class CachedJsonRpcProxy {
@@ -41,12 +41,12 @@ class CachedJsonRpcProxy {
     return this;
   }
 
-  async _forwardRequest(req, res) {
+  async forwardRequest(req, res) {
     const { method, url, body } = req;
     const config = {
       method,
       url,
-    }
+    };
     if (method === 'POST') {
       config.data = body;
     }
@@ -70,18 +70,18 @@ class CachedJsonRpcProxy {
         try {
           monitorLogger.append({
             httpMethod: req.method,
-            httpURL: req.url.toString()
+            httpURL: req.url.toString(),
           });
           if (req.method !== 'POST') {
-            await this._forwardRequest(req, res);
+            await this.forwardRequest(req, res);
             return;
           }
           const jsonRpcRequest = { method: req.body.method, params: req.body.params };
           monitorLogger.append({ jsonRpcRequest });
           // TODO: parse jsonRpcRequest
-          const key = getKey(jsonRpcRequest)
+          const key = getKey(jsonRpcRequest);
           const cachedResult = await this.cache.get(key);
-          monitorLogger.append({ cacheHit: !!cacheResult });
+          monitorLogger.append({ cacheHit: !!cachedResult });
           if (cachedResult) {
             const resBody = {
               jsonrpc: '2.0',
@@ -92,7 +92,7 @@ class CachedJsonRpcProxy {
             return;
           }
           const forwardStart = Date.now();
-          const proxyRes = await this._forwardRequest(req, res);
+          const proxyRes = await this.forwardRequest(req, res);
           monitorLogger.append({
             forwardDurationMs: Date.now() - forwardStart,
           });
@@ -101,30 +101,32 @@ class CachedJsonRpcProxy {
           }
           const { result } = proxyRes.data;
           if (result) {
-            const ttlSeconds = match(jsonRpcRequest, this.matchers)
+            const ttlSeconds = match(jsonRpcRequest, this.matchers);
             if (ttlSeconds > 0) {
               const value = jsonStringify(result);
               try {
                 await this.cache.set(key, value, ttlSeconds);
               } catch (error) {
                 miscLogger.append({
-                  timestampMs: startTime,
                   type: 'CACHE_SET_ERROR',
                   error,
-                })
+                  // TODO: more details of the request
+                });
+                /* eslint-disable no-console */
                 console.error(`cannot set key ${key} to ${value}`);
                 console.error(error);
+                /* eslint-enable no-console */
               }
               return;
             }
           }
         } finally {
-          monitorLogger.append({ processDurationMs: Date.now() - timestamp });
+          monitorLogger.append({ processDurationMs: Date.now() - startTime });
           miscLogger.commit();
           monitorLogger.commit();
         }
       });
-    }
+    };
   }
 }
 

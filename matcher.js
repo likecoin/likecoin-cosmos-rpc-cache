@@ -17,20 +17,20 @@ function method(methodName, ...subMatchers) {
       return 0;
     }
     return match(jsonRpcRequest, subMatchers);
-  }
+  };
 }
 
 function abciQuery(path, ...subMatchers) {
   return (jsonRpcRequest) => {
-    if (jsonRpcRequest.params?.path !== path) {
+    if (!jsonRpcRequest.params || jsonRpcRequest.params.path !== path) {
       return 0;
     }
     return match(jsonRpcRequest, subMatchers);
-  }
+  };
 }
 
 module.exports = {
   match,
   method,
   abciQuery,
-}
+};

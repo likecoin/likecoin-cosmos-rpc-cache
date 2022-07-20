@@ -36,7 +36,7 @@ module.exports = {
       validators: 3600,
 
       block: (jsonRpcRequest) => {
-        const height = jsonRpcRequest.params.height;
+        const { height } = jsonRpcRequest.params;
         if (!height || height === '0') {
           // don't match with this matcher, fallback to the default
           return 0;

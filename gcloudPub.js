@@ -36,13 +36,14 @@ publisher.publish = async (publishTopic, obj) => {
     '@timestamp': new Date().toISOString(),
     appServer: config.APP_SERVER || 'json-rpc-cache',
     uuidv4: uuidv4(),
-  }
+  };
 
   const data = JSON.stringify(payload);
   const dataBuffer = Buffer.from(data);
   try {
     await publisherWrapper[publishTopic].publish(dataBuffer);
   } catch (err) {
+    // eslint-disable-next-line no-console
     console.error('ERROR:', err);
   }
 };
@@ -61,7 +62,7 @@ function getPubsubLogger(topic) {
         publisher.publishTopic(topic, payload);
       }
     },
-  }
+  };
 }
 
 module.exports = {

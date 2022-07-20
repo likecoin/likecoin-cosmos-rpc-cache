@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "lint": "eslint ."
   },
   "author": "Chung Wu <imwmbm@gmail.com>",
   "license": "GPLv3",
@@ -15,5 +16,9 @@
     "helmet": "^5.1.0",
     "redis": "^4.1.0",
     "uuid": "^8.3.2"
+  },
+  "devDependencies": {
+    "eslint": "^8.20.0",
+    "eslint-config-airbnb-base": "^15.0.0"
   }
 }

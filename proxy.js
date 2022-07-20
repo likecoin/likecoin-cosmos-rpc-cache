@@ -51,9 +51,11 @@ class CachedJsonRpcProxy {
       config.data = body;
     }
     const proxyRes = await this.api(config);
-    const contentType = proxyRes.headers['content-type']
-    res.status(proxyRes.status)
-    if (contentType) res.set('content-type', contentType)
+    const contentType = proxyRes.headers['content-type'];
+    res.status(proxyRes.status);
+    if (contentType) {
+      res.set('content-type', contentType);
+    }
     res.send(proxyRes.data);
     return proxyRes;
   }

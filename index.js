@@ -1,5 +1,5 @@
 const express = require('express');
-const helmet = require("helmet");
+const helmet = require('helmet');
 
 const { RedisCache } = require('./cache');
 const { CachedJsonRpcProxy } = require('./proxy');

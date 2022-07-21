@@ -36,7 +36,7 @@ module.exports = {
       validators: 3600,
 
       block: (jsonRpcRequest) => {
-        const height = jsonRpcRequest.params.height;
+        const { height } = jsonRpcRequest.params;
         if (!height || height === '0') {
           // don't match with this matcher, fallback to the default
           return 0;
@@ -129,5 +129,11 @@ module.exports = {
       '/likechain.likenft.Query/RoyaltyConfigIndex': 60,
     },
     default: 10,
+  },
+  pubsub: {
+    GCLOUD_PUBSUB_ENABLE: true,
+    GCLOUD_PUBSUB_MAX_MESSAGES: 10,
+    GCLOUD_PUBSUB_MAX_WAIT: 1000,
+    APP_SERVER: 'json-rpc-cache',
   },
 };

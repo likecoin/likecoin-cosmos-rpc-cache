@@ -1,26 +1,30 @@
 const express = require('express');
-const helmet = require("helmet");
+const helmet = require('helmet');
 
 const { RedisCache } = require('./cache');
 const { CachedJsonRpcProxy } = require('./proxy');
-const { listenAddr, rpcEndpoint, redisConfig, cache: matchersConfig } = require('./config');
-const { method, abciQuery } = require('./matcher.js');
-const config = require('./config');
+const {
+  listenAddr,
+  rpcEndpoint,
+  redisConfig,
+  cache: matchersConfig,
+} = require('./config/config');
+const { method, abciQuery } = require('./matcher');
 
-function getMatchersFromConfig(matchersConfig) {
+function getMatchersFromConfig(config) {
   const matchers = [];
-  if (matchersConfig.method) {
-    for (const [methodName, ...subMatchers] of Object.entries(matchersConfig.method)) {
+  if (config.method) {
+    for (const [methodName, ...subMatchers] of Object.entries(config.method)) {
       matchers.push(method(methodName, ...subMatchers));
     }
   }
-  if (matchersConfig.abciQuery) {
-    for (const [path, ...subMatchers] of Object.entries(matchersConfig.abciQuery)) {
+  if (config.abciQuery) {
+    for (const [path, ...subMatchers] of Object.entries(config.abciQuery)) {
       matchers.push(abciQuery(path, ...subMatchers));
     }
   }
-  if (matchersConfig.default) {
-    matchers.push(matchersConfig.default);
+  if (config.default) {
+    matchers.push(config.default);
   }
   return matchers;
 }

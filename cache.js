@@ -8,12 +8,12 @@ class RedisCache {
 
   async get(key) {
     await this.clientConnectPromise;
-    return await this.client.get(key);
+    return this.client.get(key);
   }
 
   async set(key, value, ttlSeconds) {
     await this.clientConnectPromise;
-    return await this.client.setEx(key, ttlSeconds, value);
+    return this.client.setEx(key, ttlSeconds, value);
   }
 }
 

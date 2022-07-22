@@ -40,6 +40,7 @@ publisher.publish = async (publishTopic, obj) => {
     ...obj,
     '@timestamp': new Date().toISOString(),
     appServer: config.APP_SERVER || 'json-rpc-cache',
+    ethNetwork: config.ETH_NETWORK_NAME || 'rinkeby', // used to split production and dev log
     uuidv4: uuidv4(),
   };
 

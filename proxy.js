@@ -63,6 +63,7 @@ class CachedJsonRpcProxy {
   getExpressMiddleware() {
     const bodyParser = express.json({
       limit: '100mb',
+      type: () => true,
     });
     return async (req, res) => {
       const miscLogger = getPubsubLogger(PUBSUB_TOPIC_MISC);

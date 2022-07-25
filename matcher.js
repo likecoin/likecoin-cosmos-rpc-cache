@@ -29,8 +29,27 @@ function abciQuery(path, ...subMatchers) {
   };
 }
 
+function getMatchersFromConfig(config) {
+  const matchers = [];
+  if (config.method) {
+    for (const [methodName, ...subMatchers] of Object.entries(config.method)) {
+      matchers.push(method(methodName, ...subMatchers));
+    }
+  }
+  if (config.abciQuery) {
+    for (const [path, ...subMatchers] of Object.entries(config.abciQuery)) {
+      matchers.push(abciQuery(path, ...subMatchers));
+    }
+  }
+  if (config.default) {
+    matchers.push(config.default);
+  }
+  return matchers;
+}
+
 module.exports = {
   match,
   method,
   abciQuery,
+  getMatchersFromConfig,
 };

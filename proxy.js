@@ -9,7 +9,7 @@ const { axiosOptions } = require('./config/config');
 const { match } = require('./matcher');
 const { publisher } = require('./gcloudPub');
 const { PUBSUB_TOPIC_MISC, PUBSUB_TOPIC_MONITOR } = require('./constant');
-const { parseJsonRpcRequest } = require('./cosmos');
+const { parseJsonRpcParams } = require('./paramParsers/parser');
 
 function getKey(jsonRpcRequest) {
   const key = jsonStringify(jsonRpcRequest);
@@ -134,10 +134,15 @@ class CachedJsonRpcProxy {
             Object.assign(monitorLog, log);
             return;
           }
-          const jsonRpcRequest = { method: req.body.method, params: req.body.params };
-          const parsedRequest = parseJsonRpcRequest(jsonRpcRequest);
+          const { method, params } = req.body;
+          const parsedParams = parseJsonRpcParams(method, params);
+          const parsedRequest = {
+            jsonRpcMethod: method,
+            jsonRpcParams: parsedParams,
+          };
           Object.assign(monitorLog, parsedRequest);
           this.specialRequestLog(parsedRequest);
+          const jsonRpcRequest = { method, params };
           const cachedValue = await this.tryProcessFromCache(req, res, jsonRpcRequest);
           Object.assign(monitorLog, { cacheHit: !!cachedValue });
           if (cachedValue) {

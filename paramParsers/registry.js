@@ -8,6 +8,9 @@ const { SendAuthorization } = require('cosmjs-types/cosmos/bank/v1beta1/authz');
 const { StakeAuthorization } = require('cosmjs-types/cosmos/staking/v1beta1/authz');
 const { BasicAllowance, PeriodicAllowance, AllowedMsgAllowance } = require('cosmjs-types/cosmos/feegrant/v1beta1/feegrant');
 const { registryTypes: originalRegistryTypes } = require('@likecoin/iscn-js/dist/messages/registry');
+const { PubKey: Secp256k1PubKey } = require('cosmjs-types/cosmos/crypto/secp256k1/keys');
+const { PubKey: Ed25519PubKey } = require('cosmjs-types/cosmos/crypto/ed25519/keys');
+const { LegacyAminoPubKey } = require('cosmjs-types/cosmos/crypto/multisig/keys');
 
 const registryTypes = [
   ...originalRegistryTypes,
@@ -22,6 +25,9 @@ const registryTypes = [
   ['/cosmos.feegrant.v1beta1.BasicAllowance', BasicAllowance],
   ['/cosmos.feegrant.v1beta1.PeriodicAllowance', PeriodicAllowance],
   ['/cosmos.feegrant.v1beta1.AllowedMsgAllowance', AllowedMsgAllowance],
+  ['/cosmos.crypto.secp256k1.PubKey', Secp256k1PubKey],
+  ['/cosmos.crypto.ed25519.PubKey', Ed25519PubKey],
+  ['/cosmos.crypto.multisig.LegacyAminoPubKey', LegacyAminoPubKey],
 ];
 
 const messageRegistryMap = registryTypes

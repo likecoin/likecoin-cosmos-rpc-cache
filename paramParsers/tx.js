@@ -2,7 +2,6 @@ const {
   TxRaw, TxBody, AuthInfo,
 } = require('cosmjs-types/cosmos/tx/v1beta1/tx');
 const { pubkeyToAddress, pubkeyType: AminoPubKeyType } = require('@cosmjs/amino');
-  
 const {
   messageRegistryMap,
   messageRegistry,

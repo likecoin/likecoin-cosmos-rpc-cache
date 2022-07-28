@@ -154,9 +154,9 @@ class CachedJsonRpcProxy {
         } catch (err) {
           const error = err.stack || err;
           publisher.publish(PUBSUB_TOPIC_MISC, {
+            ...monitorLog,
             logType: 'eventProxyError',
             error,
-            // TODO: more details
           });
         } finally {
           Object.assign(monitorLog, { processDurationMs: Date.now() - startTime });

@@ -57,7 +57,8 @@ function parsePubKey(pubKey) {
   // TODO: if public key types increased, better handle using registry form
   switch (typeUrl) {
     case '/cosmos.crypto.secp256k1.PubKey':
-    case '/cosmos.crypto.ed25519.PubKey': {
+    case '/cosmos.crypto.ed25519.PubKey':
+    case '/cosmos.crypto.sr25519.PubKey': {
       parsedPubKey.key = Buffer.from(parsedPubKey.key).toString('base64');
       break;
     }
@@ -83,6 +84,12 @@ function pubKeyToAmino(pubKey) {
     case '/cosmos.crypto.ed25519.PubKey': {
       return {
         type: AminoPubKeyType.ed25519,
+        value: pubKey.key,
+      };
+    }
+    case '/cosmos.crypto.sr25519.PubKey': {
+      return {
+        type: AminoPubKeyType.sr25519,
         value: pubKey.key,
       };
     }

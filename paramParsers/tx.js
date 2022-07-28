@@ -12,7 +12,8 @@ function parseAny(any) {
   const { typeUrl, value } = any;
   const T = messageRegistryMap[typeUrl];
   if (!T) {
-    // TODO: log?
+    // eslint-disable-next-line no-console
+    console.log(`Warning: cannot parse unregistered typeUrl ${typeUrl}`);
     return {
       parsed: false,
       typeUrl,

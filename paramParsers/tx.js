@@ -13,7 +13,7 @@ function parseAny(any) {
   const T = messageRegistryMap[typeUrl];
   if (!T) {
     // eslint-disable-next-line no-console
-    console.log(`Warning: cannot parse unregistered typeUrl ${typeUrl}`);
+    console.warn(`Warning: cannot parse unregistered typeUrl ${typeUrl}`);
     return {
       parsed: false,
       typeUrl,
@@ -130,9 +130,9 @@ const broadcastTxParser = (params) => {
   } catch (err) {
     const error = err.stack || err;
     // eslint-disable-next-line no-console
-    console.log('Warning: error when parsing transaction sender');
+    console.error('Warning: error when parsing transaction sender');
     // eslint-disable-next-line no-console
-    console.log(error);
+    console.error(error);
   }
   authInfo.fee.gasLimit = authInfo.fee.gasLimit.toString();
   return {

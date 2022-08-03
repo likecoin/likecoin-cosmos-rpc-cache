@@ -7,8 +7,9 @@ const jsonStringify = require('fast-json-stable-stringify');
 
 const { axiosOptions } = require('./config/config');
 const { match } = require('./matcher');
-const { getPubsubLogger } = require('./gcloudPub');
+const { publisher } = require('./gcloudPub');
 const { PUBSUB_TOPIC_MISC, PUBSUB_TOPIC_MONITOR } = require('./constant');
+const { parseJsonRpcParams } = require('./paramParsers/parser');
 
 function getKey(jsonRpcRequest) {
   const key = jsonStringify(jsonRpcRequest);
@@ -41,7 +42,55 @@ class CachedJsonRpcProxy {
     return this;
   }
 
+  specialRequestLog(parsedRequest) {
+    // TODO
+  }
+
+  async tryProcessFromCache(req, res, jsonRpcRequest) {
+    const key = getKey(jsonRpcRequest);
+    const value = await this.cache.get(key);
+    if (value) {
+      const resBody = {
+        jsonrpc: '2.0',
+        id: req.body.id,
+        result: JSON.parse(value),
+      };
+      res.status(200).json(resBody).end();
+    }
+    return value;
+  }
+
+  async cacheProxyResult(proxyRes, jsonRpcRequest) {
+    if (proxyRes.status !== 200 || proxyRes.data.error) {
+      return;
+    }
+    const { result } = proxyRes.data;
+    if (result) {
+      const ttlSeconds = match(jsonRpcRequest, this.matchers);
+      if (ttlSeconds > 0) {
+        const key = getKey(jsonRpcRequest);
+        const value = jsonStringify(result);
+        try {
+          await this.cache.set(key, value, ttlSeconds);
+        } catch (err) {
+          const error = err.stack || err;
+          publisher.publish(PUBSUB_TOPIC_MISC, {
+            logType: 'eventCacheSetError',
+            error,
+            key,
+            value,
+          });
+          // eslint-disable-next-line no-console
+          console.error(`Cannot set cache key ${key} to ${value}`);
+          // eslint-disable-next-line no-console
+          console.error(error);
+        }
+      }
+    }
+  }
+
   async forwardRequest(req, res) {
+    const t = Date.now();
     const { method, url, body } = req;
     const config = {
       method,
@@ -57,7 +106,13 @@ class CachedJsonRpcProxy {
       res.set('content-type', contentType);
     }
     res.send(proxyRes.data);
-    return proxyRes;
+    return {
+      proxyRes,
+      log: {
+        forwardDurationMs: Date.now() - t,
+        proxyResponseCode: proxyRes.status,
+      },
+    };
   }
 
   getExpressMiddleware() {
@@ -66,70 +121,46 @@ class CachedJsonRpcProxy {
       type: () => true,
     });
     return async (req, res) => {
-      const miscLogger = getPubsubLogger(PUBSUB_TOPIC_MISC);
-      const monitorLogger = getPubsubLogger(PUBSUB_TOPIC_MONITOR);
-      const startTime = Date.now();
       bodyParser(req, res, async () => {
+        const monitorLog = {
+          logType: 'eventProxyRequest',
+          httpMethod: req.method,
+          httpURL: req.url.toString(),
+        };
+        const startTime = Date.now();
         try {
-          monitorLogger.append({
-            logType: 'eventProxyRequest',
-            httpMethod: req.method,
-            httpURL: req.url.toString(),
-          });
           if (req.method !== 'POST') {
-            await this.forwardRequest(req, res);
+            const { log } = await this.forwardRequest(req, res);
+            Object.assign(monitorLog, log);
             return;
           }
-          const jsonRpcRequest = { method: req.body.method, params: req.body.params };
-          monitorLogger.append({
-            jsonRpcMethod: jsonRpcRequest.method,
-            // TODO: parse jsonRpcRequest
+          const { method, params } = req.body;
+          const parsedParams = parseJsonRpcParams(method, params);
+          const parsedRequest = {
+            jsonRpcMethod: method,
+            jsonRpcParams: parsedParams,
+          };
+          Object.assign(monitorLog, parsedRequest);
+          this.specialRequestLog(parsedRequest);
+          const jsonRpcRequest = { method, params };
+          const cachedValue = await this.tryProcessFromCache(req, res, jsonRpcRequest);
+          Object.assign(monitorLog, { cacheHit: !!cachedValue });
+          if (cachedValue) {
+            return;
+          }
+          const { proxyRes, log } = await this.forwardRequest(req, res);
+          Object.assign(monitorLog, log);
+          await this.cacheProxyResult(proxyRes, jsonRpcRequest);
+        } catch (err) {
+          const error = err.stack || err;
+          publisher.publish(PUBSUB_TOPIC_MISC, {
+            ...monitorLog,
+            logType: 'eventProxyError',
+            error,
           });
-          const key = getKey(jsonRpcRequest);
-          const cachedResult = await this.cache.get(key);
-          monitorLogger.append({ cacheHit: !!cachedResult });
-          if (cachedResult) {
-            const resBody = {
-              jsonrpc: '2.0',
-              id: req.body.id,
-              result: JSON.parse(cachedResult),
-            };
-            res.status(200).json(resBody).end();
-            return;
-          }
-          const forwardStart = Date.now();
-          const proxyRes = await this.forwardRequest(req, res);
-          monitorLogger.append({
-            forwardDurationMs: Date.now() - forwardStart,
-          });
-          if (proxyRes.status !== 200 || proxyRes.data.error) {
-            return;
-          }
-          const { result } = proxyRes.data;
-          if (result) {
-            const ttlSeconds = match(jsonRpcRequest, this.matchers);
-            if (ttlSeconds > 0) {
-              const value = jsonStringify(result);
-              try {
-                await this.cache.set(key, value, ttlSeconds);
-              } catch (error) {
-                miscLogger.append({
-                  logType: 'eventCacheError',
-                  error,
-                  // TODO: more details of the request
-                });
-                // eslint-disable-next-line no-console
-                console.error(`cannot set key ${key} to ${value}`);
-                // eslint-disable-next-line no-console
-                console.error(error);
-              }
-              return;
-            }
-          }
         } finally {
-          monitorLogger.append({ processDurationMs: Date.now() - startTime });
-          miscLogger.commit();
-          monitorLogger.commit();
+          Object.assign(monitorLog, { processDurationMs: Date.now() - startTime });
+          publisher.publish(PUBSUB_TOPIC_MONITOR, monitorLog);
         }
       });
     };

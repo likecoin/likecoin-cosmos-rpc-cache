@@ -9,25 +9,7 @@ const {
   redisConfig,
   cache: matchersConfig,
 } = require('./config/config');
-const { method, abciQuery } = require('./matcher');
-
-function getMatchersFromConfig(config) {
-  const matchers = [];
-  if (config.method) {
-    for (const [methodName, ...subMatchers] of Object.entries(config.method)) {
-      matchers.push(method(methodName, ...subMatchers));
-    }
-  }
-  if (config.abciQuery) {
-    for (const [path, ...subMatchers] of Object.entries(config.abciQuery)) {
-      matchers.push(abciQuery(path, ...subMatchers));
-    }
-  }
-  if (config.default) {
-    matchers.push(config.default);
-  }
-  return matchers;
-}
+const { getMatchersFromConfig } = require('./matcher');
 
 const cache = new RedisCache(redisConfig);
 const proxy = new CachedJsonRpcProxy(rpcEndpoint, cache);

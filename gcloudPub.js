@@ -53,24 +53,6 @@ publisher.publish = async (publishTopic, obj) => {
   }
 };
 
-function getPubsubLogger(topic) {
-  let accumulatedPayload = {};
-  return {
-    append(payload) {
-      Object.assign(accumulatedPayload, payload);
-      return this;
-    },
-    async commit() {
-      const payload = accumulatedPayload;
-      accumulatedPayload = {};
-      if (Object.keys(payload).length > 0) {
-        await publisher.publish(topic, payload);
-      }
-    },
-  };
-}
-
 module.exports = {
   publisher,
-  getPubsubLogger,
 };

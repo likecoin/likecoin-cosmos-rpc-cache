@@ -37,14 +37,15 @@ const messageHandler = {};
 function parseMsgs(msgs) {
   const parsedMsgs = [];
   for (const msg of msgs) {
-    const { parsed, typeUrl, result: parsedMessage } = parseAny(msg);
+    const { parsed, typeUrl, result: anyParsedMsg } = parseAny(msg);
+    let finalMsg = anyParsedMsg;
     if (parsed) {
       const handler = messageHandler[typeUrl];
       if (handler) {
-        handler(parsedMessage);
+        finalMsg = handler(anyParsedMsg);
       }
     }
-    parsedMsgs.push(parsedMessage);
+    parsedMsgs.push(finalMsg);
   }
   return parsedMsgs;
 }
@@ -149,36 +150,56 @@ function registerMessageHandler(typeUrl, parser) {
   messageHandler[typeUrl] = parser;
 }
 
+function deepCopy(obj) {
+  if (typeof obj !== 'object') {
+    return obj;
+  }
+  if (Buffer.isBuffer(obj)) {
+    return Buffer.from(obj);
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(deepCopy);
+  }
+  const result = {};
+  for (const [key, value] of Object.entries(obj)) {
+    result[key] = deepCopy(value);
+  }
+  return result;
+}
+
 function parseFieldAny(...fieldPath) {
   const fieldName = fieldPath.pop();
   return (msg) => {
-    let target = msg;
+    const output = deepCopy(msg);
+    let target = output;
     for (const pathName of fieldPath) {
       target = target[pathName];
       if (!target) {
-        return;
+        return output;
       }
     }
     if (target[fieldName]) {
       const { result } = parseAny(target[fieldName]);
       target[fieldName] = result;
     }
+    return output;
   };
 }
 
 registerMessageHandler('/cosmos.gov.v1beta1.MsgSubmitProposal', parseFieldAny('content'));
 registerMessageHandler('/cosmos.authz.v1beta1.MsgGrant', parseFieldAny('grant', 'authorization'));
 registerMessageHandler('/cosmos.authz.v1beta1.MsgExec', (msgExec) => {
-  const { msgs } = msgExec;
-  if (!msgs) {
-    return;
+  const output = deepCopy(msgExec);
+  const { msgs } = output;
+  if (msgs) {
+    output.msgs = parseMsgs(msgs);
   }
-  const target = msgExec;
-  target.msgs = parseMsgs(msgs);
+  return output;
 });
 registerMessageHandler('/cosmos.feegrant.v1beta1.MsgGrantAllowance', parseFieldAny('allowance'));
 registerMessageHandler('/likechain.iscn.MsgCreateIscnRecord', (msg) => {
-  const { record } = msg;
+  const output = deepCopy(msg);
+  const { record } = output;
   if (record) {
     if (record.contentMetadata) {
       record.contentMetadata = JSON.parse(record.contentMetadata.toString('utf-8'));
@@ -187,6 +208,7 @@ registerMessageHandler('/likechain.iscn.MsgCreateIscnRecord', (msg) => {
       record.stakeholders = record.stakeholders.map((s) => JSON.parse(s.toString('utf-8')));
     }
   }
+  return output;
 });
 
 module.exports = {

@@ -32,20 +32,26 @@ function parseAny(any) {
   };
 }
 
-const messageHandler = {};
+function parseBuffer(buf) {
+  return buf.toString('utf-8');
+}
+
+const messageHandlers = {};
 
 function parseMsgs(msgs) {
   const parsedMsgs = [];
   for (const msg of msgs) {
     const { parsed, typeUrl, result: anyParsedMsg } = parseAny(msg);
-    let finalMsg = anyParsedMsg;
+    let processedMsg = anyParsedMsg;
     if (parsed) {
-      const handler = messageHandler[typeUrl];
-      if (handler) {
-        finalMsg = handler(anyParsedMsg);
+      const handlers = messageHandlers[typeUrl];
+      if (handlers) {
+        for (const handler of handlers) {
+          processedMsg = handler(processedMsg);
+        }
       }
     }
-    parsedMsgs.push(finalMsg);
+    parsedMsgs.push(processedMsg);
   }
   return parsedMsgs;
 }
@@ -143,11 +149,12 @@ const broadcastTxParser = (params) => {
   };
 };
 
-function registerMessageHandler(typeUrl, parser) {
-  if (messageHandler[typeUrl] !== undefined) {
-    throw new Error(`Message handler for type URL ${typeUrl} already registered`);
+function registerMessageHandlers(typeUrl, ...parsers) {
+  if (messageHandlers[typeUrl] === undefined) {
+    messageHandlers[typeUrl] = parsers;
+  } else {
+    messageHandlers[typeUrl] = messageHandlers[typeUrl].concat(parsers);
   }
-  messageHandler[typeUrl] = parser;
 }
 
 function deepCopy(obj) {
@@ -160,14 +167,17 @@ function deepCopy(obj) {
   if (Array.isArray(obj)) {
     return obj.map(deepCopy);
   }
-  const result = {};
+  if (obj.constructor === Date) {
+    return new Date(obj);
+  }
+  const result = Object.create(Object.getPrototypeOf(obj));
   for (const [key, value] of Object.entries(obj)) {
     result[key] = deepCopy(value);
   }
   return result;
 }
 
-function parseFieldAny(...fieldPath) {
+function parseField(parseFunc, ...fieldPath) {
   const fieldName = fieldPath.pop();
   return (msg) => {
     const output = deepCopy(msg);
@@ -179,16 +189,26 @@ function parseFieldAny(...fieldPath) {
       }
     }
     if (target[fieldName]) {
-      const { result } = parseAny(target[fieldName]);
-      target[fieldName] = result;
+      target[fieldName] = parseFunc(target[fieldName]);
     }
     return output;
   };
 }
 
-registerMessageHandler('/cosmos.gov.v1beta1.MsgSubmitProposal', parseFieldAny('content'));
-registerMessageHandler('/cosmos.authz.v1beta1.MsgGrant', parseFieldAny('grant', 'authorization'));
-registerMessageHandler('/cosmos.authz.v1beta1.MsgExec', (msgExec) => {
+function parseFieldAny(...fieldPath) {
+  return parseField((any) => {
+    const { result } = parseAny(any);
+    return result;
+  }, ...fieldPath);
+}
+
+function parseFieldBuffer(...fieldPath) {
+  return parseField(parseBuffer, ...fieldPath);
+}
+
+registerMessageHandlers('/cosmos.gov.v1beta1.MsgSubmitProposal', parseFieldAny('content'));
+registerMessageHandlers('/cosmos.authz.v1beta1.MsgGrant', parseFieldAny('grant', 'authorization'));
+registerMessageHandlers('/cosmos.authz.v1beta1.MsgExec', (msgExec) => {
   const output = deepCopy(msgExec);
   const { msgs } = output;
   if (msgs) {
@@ -196,8 +216,8 @@ registerMessageHandler('/cosmos.authz.v1beta1.MsgExec', (msgExec) => {
   }
   return output;
 });
-registerMessageHandler('/cosmos.feegrant.v1beta1.MsgGrantAllowance', parseFieldAny('allowance'));
-registerMessageHandler('/likechain.iscn.MsgCreateIscnRecord', (msg) => {
+registerMessageHandlers('/cosmos.feegrant.v1beta1.MsgGrantAllowance', parseFieldAny('allowance'));
+registerMessageHandlers('/likechain.iscn.MsgCreateIscnRecord', (msg) => {
   const output = deepCopy(msg);
   const { record } = output;
   if (record) {
@@ -211,7 +231,17 @@ registerMessageHandler('/likechain.iscn.MsgCreateIscnRecord', (msg) => {
   return output;
 });
 
+registerMessageHandlers(
+  '/likechain.likenft.v1.MsgNewClass',
+  parseFieldBuffer('input', 'metadata'),
+  parseField((n) => n.toString(), 'input', 'config', 'maxSupply'),
+  parseField(
+    (periods) => periods.map((period) => ({ ...period, mintPrice: period.mintPrice.toString() })),
+    ...['input', 'config', 'blindBoxConfig', 'mintPeriods'],
+  ),
+);
+
 module.exports = {
   broadcastTxParser,
-  registerMessageHandler,
+  registerMessageHandlers,
 };

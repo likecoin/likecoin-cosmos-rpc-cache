@@ -10,6 +10,7 @@ const { match } = require('./matcher');
 const { publisher } = require('./gcloudPub');
 const { PUBSUB_TOPIC_MISC, PUBSUB_TOPIC_MONITOR } = require('./constant');
 const { parseJsonRpcParams } = require('./paramParsers/parser');
+const { logBroadcastTx } = require('./logger/broadcast');
 
 function getKey(jsonRpcRequest) {
   const key = jsonStringify(jsonRpcRequest);
@@ -40,10 +41,6 @@ class CachedJsonRpcProxy {
       }
     }
     return this;
-  }
-
-  specialRequestLog(parsedRequest) {
-    // TODO
   }
 
   async tryProcessFromCache(req, res, jsonRpcRequest) {
@@ -141,7 +138,7 @@ class CachedJsonRpcProxy {
             jsonRpcParams: parsedParams,
           };
           Object.assign(monitorLog, parsedRequest);
-          this.specialRequestLog(parsedRequest);
+          logBroadcastTx(parsedRequest);
           const jsonRpcRequest = { method, params };
           const cachedValue = await this.tryProcessFromCache(req, res, jsonRpcRequest);
           Object.assign(monitorLog, { cacheHit: !!cachedValue });

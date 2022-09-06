@@ -3,6 +3,7 @@ const { TextProposal } = require('cosmjs-types/cosmos/gov/v1beta1/gov');
 const { ParameterChangeProposal } = require('cosmjs-types/cosmos/params/v1beta1/params');
 const { CommunityPoolSpendProposal } = require('cosmjs-types/cosmos/distribution/v1beta1/distribution');
 const { SoftwareUpgradeProposal, CancelSoftwareUpgradeProposal } = require('cosmjs-types/cosmos/upgrade/v1beta1/upgrade');
+const { ClientUpdateProposal } = require('cosmjs-types/ibc/core/client/v1/client');
 const { GenericAuthorization } = require('cosmjs-types/cosmos/authz/v1beta1/authz');
 const { SendAuthorization } = require('cosmjs-types/cosmos/bank/v1beta1/authz');
 const { StakeAuthorization } = require('cosmjs-types/cosmos/staking/v1beta1/authz');
@@ -19,6 +20,7 @@ const registryTypes = [
   ['/cosmos.distribution.v1beta1.CommunityPoolSpendProposal', CommunityPoolSpendProposal],
   ['/cosmos.upgrade.v1beta1.SoftwareUpgradeProposal', SoftwareUpgradeProposal],
   ['/cosmos.upgrade.v1beta1.CancelSoftwareUpgradeProposal', CancelSoftwareUpgradeProposal],
+  ['/ibc.core.client.v1.ClientUpdateProposal', ClientUpdateProposal],
   ['/cosmos.authz.v1beta1.GenericAuthorization', GenericAuthorization],
   ['/cosmos.bank.v1beta1.SendAuthorization', SendAuthorization],
   ['/cosmos.staking.v1beta1.StakeAuthorization', StakeAuthorization],

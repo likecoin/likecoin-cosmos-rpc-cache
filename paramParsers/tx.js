@@ -133,7 +133,9 @@ const broadcastTxParser = (params) => {
   }
   let sender = '';
   try {
-    sender = getPubKeyAddress(authInfo.signerInfos[0].publicKey);
+    if (authInfo.signerInfos[0].publicKey) {
+      sender = getPubKeyAddress(authInfo.signerInfos[0].publicKey);
+    }
   } catch (err) {
     const error = err.stack || err;
     // eslint-disable-next-line no-console

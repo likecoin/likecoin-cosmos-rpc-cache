@@ -2,11 +2,21 @@ const {
   TxRaw, TxBody, AuthInfo,
 } = require('cosmjs-types/cosmos/tx/v1beta1/tx');
 const { pubkeyToAddress, pubkeyType: AminoPubKeyType } = require('@cosmjs/amino');
+const { createHash } = require('crypto');
 const {
   messageRegistryMap,
   messageRegistry,
 } = require('./registry');
 const { bech32Prefix } = require('../config/config');
+
+function computeTransactionHash(rawTx) {
+  const tx = Uint8Array.from(TxRaw.encode(rawTx).finish());
+  const sha256 = createHash('sha256');
+  const txHash = sha256
+    .update(Buffer.from(tx.buffer))
+    .digest('hex');
+  return txHash.toUpperCase();
+}
 
 function parseAny(any) {
   const { typeUrl, value } = any;
@@ -121,6 +131,7 @@ function getPubKeyAddress(pubKey) {
 const broadcastTxParser = (params) => {
   const tx = Buffer.from(params.tx, 'base64');
   const txRaw = TxRaw.decode(tx);
+  const txHash = computeTransactionHash(txRaw);
   const txBody = TxBody.decode(txRaw.bodyBytes);
   const { messages } = txBody;
   const parsedMsgs = parseMsgs(messages);
@@ -133,11 +144,16 @@ const broadcastTxParser = (params) => {
   }
   let sender = '';
   try {
-    sender = getPubKeyAddress(authInfo.signerInfos[0].publicKey);
+    if (authInfo.signerInfos[0].publicKey) {
+      sender = getPubKeyAddress(authInfo.signerInfos[0].publicKey);
+    } else {
+      // eslint-disable-next-line no-console
+      console.warn(`Warning: missing sender for transaction ${txHash}`);
+    }
   } catch (err) {
     const error = err.stack || err;
     // eslint-disable-next-line no-console
-    console.error('Warning: error when parsing transaction sender');
+    console.error(`Warning: error when parsing transaction sender for ${txHash}`);
     // eslint-disable-next-line no-console
     console.error(error);
   }
